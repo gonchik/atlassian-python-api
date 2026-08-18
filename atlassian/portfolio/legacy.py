@@ -1,15 +1,19 @@
 # coding=utf-8
-import logging
+"""Legacy plan-scoped endpoints for Portfolio for Jira / Advanced Roadmaps.
 
-from .rest_client import AtlassianRestAPI
+These methods target the ``rest/roadmap/1.0`` endpoints used internally by
+the Portfolio/Advanced Roadmaps web UI. They are undocumented but kept here
+for backwards compatibility with earlier versions of this client.
 
-log = logging.getLogger(__name__)
+For the official public REST API, see the ``jpo_*`` methods provided by the
+other mixins in this package (``plan.py``, ``hierarchy.py``, ``program.py``,
+``stage.py``, ``nonworkingday.py``), based on
+https://docs.atlassian.com/portfolio-for-jira-server/REST/2.13.0/jpo/
+"""
 
 
-class Portfolio(AtlassianRestAPI):
-    def __init__(self, plan_id, *args, **kwargs):
-        self.plan_id = plan_id
-        super(Portfolio, self).__init__(*args, **kwargs)
+class LegacyRoadmapEndpoints:
+    """Plan-scoped ``rest/roadmap/1.0`` endpoints (requires ``self.plan_id``)."""
 
     def get_epic(self, epic):
         key = [x.get("link", None) for x in epic.get("links", [])]
