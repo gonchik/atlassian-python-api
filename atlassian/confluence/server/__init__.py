@@ -1826,12 +1826,12 @@ class Server(ConfluenceServerBase):
         try:
             response = self.delete(path=url, params=params)
         except HTTPError as e:
-            if e.response.status_code == 403:
+            if e.response is not None and e.response.status_code == 403:
                 raise ApiPermissionError(
                     "The user has view permission, " "but no edit permission to the content",
                     reason=e,
                 )
-            if e.response.status_code == 404:
+            if e.response is not None and e.response.status_code == 404:
                 # Raise ApiError as the documented reason is ambiguous
                 raise ApiError(
                     "The content or label doesn't exist, "
@@ -3820,9 +3820,10 @@ class Server(ConfluenceServerBase):
             parsed_html = BeautifulSoup(response.text, "html.parser")
             # Getting the poll URL to get the export progress status
             try:
-                poll_url = cast(
-                    "str", parsed_html.find("meta", {"name": "ajs-pollURI"}).get("content")
-                )  # type: ignore[union-attr]
+                poll_tag = parsed_html.find("meta", {"name": "ajs-pollURI"})
+                if poll_tag is None:
+                    raise ValueError("poll URL meta tag not found in export response")
+                poll_url = cast("str", poll_tag.get("content"))
             except Exception as e:
                 raise ApiError("Problems with getting the poll_url for get_space_export method :", reason=e)
             running_task = True
@@ -3832,10 +3833,11 @@ class Server(ConfluenceServerBase):
                     progress_response = self.get(progress_url, absolute=True) or {}
                     log.info(f"Space {space_key} export status: {progress_response.get('message', 'None')}")
                     if progress_response and progress_response.get("complete"):
-                        parsed_html = BeautifulSoup(progress_response.get("message"), "html.parser")
-                        download_url = cast(
-                            "str", parsed_html.find("a", {"class": "space-export-download-path"}).get("href")
-                        )  # type: ignore
+                        parsed_html = BeautifulSoup(progress_response.get("message") or "", "html.parser")
+                        download_tag = parsed_html.find("a", {"class": "space-export-download-path"})
+                        if download_tag is None:
+                            raise ValueError("download link not found in export completion message")
+                        download_url = cast("str", download_tag.get("href"))
                         return urljoin(ui_base_url + "/", download_url)
                     time.sleep(30)
                 except Exception as e:

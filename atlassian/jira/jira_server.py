@@ -2310,7 +2310,7 @@ class Jira(AtlassianRestAPI):
 
             return regex_output
         except HTTPError as e:
-            if e.response.status_code == 404:
+            if e.response is not None and e.response.status_code == 404:
                 # Raise ApiError as the documented reason is ambiguous
                 log.error("couldn't find issue: ", issue)
                 raise ApiNotFoundError(
@@ -4976,11 +4976,11 @@ api-group-workflows/#api-rest-api-2-workflow-search-get)
         try:
             response = self.get(url)
         except HTTPError as e:
-            if e.response.status_code == 401:
+            if e.response is not None and e.response.status_code == 401:
                 raise ApiPermissionError("Returned if the user is not logged in.", reason=e)
-            elif e.response.status_code == 403:
+            elif e.response is not None and e.response.status_code == 403:
                 raise ApiPermissionError("User doesn't have administrative permissions", reason=e)
-            elif e.response.status_code == 404:
+            elif e.response is not None and e.response.status_code == 404:
                 raise ApiNotFoundError(
                     "Returned if the project does not exist, or is not visible to the calling user",
                     reason=e,

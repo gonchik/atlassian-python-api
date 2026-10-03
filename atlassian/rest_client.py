@@ -9,8 +9,8 @@ from email.utils import parsedate_to_datetime
 from http.cookiejar import CookieJar
 from json import dumps
 from typing import (
+    Dict,
     List,
-    MutableMapping,
     Optional,
     Tuple,
     Union,
@@ -121,7 +121,7 @@ class AtlassianRestAPI(object):
         advanced_mode: Optional[bool] = None,
         kerberos: object = None,
         cloud: bool = False,
-        proxies: Optional[MutableMapping[str, str]] = None,
+        proxies: Optional[Dict[str, str]] = None,
         token: Optional[str] = None,
         cert: Union[str, Tuple[str, str], None] = None,
         backoff_and_retry: bool = False,
