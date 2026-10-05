@@ -1131,7 +1131,7 @@ class TestConfluenceV2(unittest.TestCase):
         result = self.confluence_v2.get_whiteboard_children(whiteboard_id=whiteboard_id, cursor=cursor, limit=limit)
 
         mock_get_paged.assert_called_with(
-            "api/v2/whiteboards/123456/children", params={"cursor": cursor, "limit": limit}
+            "api/v2/whiteboards/123456/direct-children", params={"cursor": cursor, "limit": limit}
         )
 
         self.assertEqual(len(result), 2)
@@ -1497,7 +1497,7 @@ class TestConfluenceV2(unittest.TestCase):
         mock_delete.return_value = None
 
         result = self.confluence_v2.delete_comment(comment_id)
-        mock_delete.assert_called_with("api/v2/comments/12345")
+        mock_delete.assert_called_with("api/v2/footer-comments/12345")
         self.assertTrue(result)
 
     @patch("atlassian.confluence.cloud.ConfluenceCloud._get_paged")

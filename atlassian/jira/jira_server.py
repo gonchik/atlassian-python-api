@@ -1456,21 +1456,36 @@ class Jira(AtlassianRestAPI):
 
         return self.get(url, params=params)
 
-    def issue(self, key: T_id, fields: Union[str, dict] = "*all", expand: Optional[str] = None):
+    def issue(
+        self,
+        key: T_id,
+        fields: Union[str, dict] = "*all",
+        expand: Optional[str] = None,
+        advanced_mode: Optional[bool] = None,
+    ):
         """Perform the Jira issue operation.
 
         Args:
-            See the method signature for API request parameters.
+            key: Issue id or key.
+            fields: Comma-separated list of issue fields to return.
+            expand: Optional expansion parameters.
+            advanced_mode: Return the raw response for this call only. When
+                None (default), the client-level ``advanced_mode`` decides.
 
         Returns:
-            Decoded Jira REST response.
+            Decoded Jira REST response, or the raw response in advanced mode.
         """
         base_url = self.resource_url("issue")
         url = f"{base_url}/{key}?fields={fields}"
         params: dict = {}
         if expand:
             params["expand"] = expand
-        return self.get(url, params=params)
+        # Note: ``advanced_mode=None`` means "follow the client default", so it
+        # must not be forwarded as an explicit override. Only a real boolean
+        # (per-call True/False) is passed through to ``get()``.
+        if advanced_mode is None:
+            return self.get(url, params=params)
+        return self.get(url, params=params, advanced_mode=advanced_mode)
 
     def get_issue(
         self,
@@ -1955,18 +1970,18 @@ class Jira(AtlassianRestAPI):
         Returns:
             Decoded Jira REST response.
         """
-        original_value = self.advanced_mode
-        self.advanced_mode = True
-        try:
-            resp = cast("Response", self.issue(issue_key, fields="*none"))
-            if resp.status_code == 404:
-                log.info('Issue "%s" does not exists', issue_key)
-                return False
-            resp.raise_for_status()
-            log.info('Issue "%s" exists', issue_key)
-            return True
-        finally:
-            self.advanced_mode = original_value
+        # Use the per-call ``advanced_mode`` instead of temporarily mutating
+        # ``self.advanced_mode``: mutating shared client state is not
+        # greenlet-safe (gevent can switch during the request I/O, so a
+        # concurrent request on the same client would unexpectedly receive a
+        # raw ``Response`` instead of decoded JSON; see issue #1254).
+        resp = cast("Response", self.issue(issue_key, fields="*none", advanced_mode=True))
+        if resp.status_code == 404:
+            log.info('Issue "%s" does not exists', issue_key)
+            return False
+        resp.raise_for_status()
+        log.info('Issue "%s" exists', issue_key)
+        return True
 
     def issue_deleted(self, issue_key: str) -> bool:
         """Perform the Jira issue deleted operation.

@@ -13,11 +13,15 @@ from typing import Any, Dict, List, Optional
 
 from requests import HTTPError
 
+from .attachments import AttachmentOperations
+from .blogposts import BlogPostOperations
 from .classification_levels import ClassificationLevelOperations
 from .content_properties import ContentPropertyOperations
 from .databases import DatabaseOperations
 from .folders import FolderOperations
 from .graphql import GraphQLOperations
+from .page_extras import PageExtrasOperations
+from .smart_links import SmartLinkOperations
 from .tasks import TaskOperations
 from .whiteboards import WhiteboardOperations
 from .admin_management import AdminManagementOperations
@@ -27,8 +31,12 @@ log = logging.getLogger(__name__)
 
 class ConfluenceCloud(
     ClassificationLevelOperations,
+    AttachmentOperations,
+    BlogPostOperations,
     ContentPropertyOperations,
     GraphQLOperations,
+    PageExtrasOperations,
+    SmartLinkOperations,
     WhiteboardOperations,
     TaskOperations,
     FolderOperations,
@@ -1691,7 +1699,11 @@ class ConfluenceCloud(
             raise
 
     def get_comment_by_id(
-        self, comment_id: str, body_format: Optional[str] = None, version: Optional[int] = None
+        self,
+        comment_id: str,
+        body_format: Optional[str] = None,
+        version: Optional[int] = None,
+        comment_type: str = "footer-comments",
     ) -> Dict[str, Any]:
         """
         Get a comment by ID.
@@ -1701,6 +1713,7 @@ class ConfluenceCloud(
             body_format: (optional) Format of the body to be returned.
                         Valid values: 'storage', 'atlas_doc_format', 'view'
             version: (optional) Version number to retrieve
+            comment_type: (optional) 'footer-comments' or 'inline-comments'
 
         Returns:
             Comment details
@@ -1708,7 +1721,11 @@ class ConfluenceCloud(
         Raises:
             HTTPError: If the API call fails
         """
-        endpoint = self.get_endpoint("comment_by_id", id=comment_id)
+        if comment_type not in ("footer-comments", "inline-comments"):
+            raise ValueError("comment_type must be 'footer-comments' or 'inline-comments'")
+        endpoint = self.get_endpoint(
+            "footer_comment" if comment_type == "footer-comments" else "inline_comment", id=comment_id
+        )
         params = {}
 
         if body_format:
@@ -1778,7 +1795,7 @@ class ConfluenceCloud(
         Raises:
             HTTPError: If the API call fails
         """
-        endpoint = self.get_endpoint("comment")
+        endpoint = self.get_endpoint("inline_comments")
 
         if body_format not in ("storage", "atlas_doc_format", "wiki"):
             raise ValueError("body_format must be one of 'storage', 'atlas_doc_format', 'wiki'")
@@ -1927,7 +1944,13 @@ class ConfluenceCloud(
             raise
 
     def update_comment(
-        self, comment_id: str, body: str, version: int, body_format: str = "storage", resolved: Optional[bool] = None
+        self,
+        comment_id: str,
+        body: str,
+        version: int,
+        body_format: str = "storage",
+        resolved: Optional[bool] = None,
+        comment_type: str = "footer-comments",
     ) -> Dict[str, Any]:
         """
         Update an existing comment.
@@ -1939,6 +1962,7 @@ class ConfluenceCloud(
             body_format: (optional) Format of the comment body.
                         Valid values: 'storage', 'atlas_doc_format', 'wiki'
             resolved: (optional) For inline comments - whether to mark as resolved
+            comment_type: (optional) 'footer-comments' or 'inline-comments'
 
         Returns:
             The updated comment
@@ -1946,7 +1970,11 @@ class ConfluenceCloud(
         Raises:
             HTTPError: If the API call fails
         """
-        endpoint = self.get_endpoint("comment_by_id", id=comment_id)
+        if comment_type not in ("footer-comments", "inline-comments"):
+            raise ValueError("comment_type must be 'footer-comments' or 'inline-comments'")
+        endpoint = self.get_endpoint(
+            "footer_comment" if comment_type == "footer-comments" else "inline_comment", id=comment_id
+        )
 
         if body_format not in ("storage", "atlas_doc_format", "wiki"):
             raise ValueError("body_format must be one of 'storage', 'atlas_doc_format', 'wiki'")
@@ -1965,12 +1993,13 @@ class ConfluenceCloud(
             log.error(f"Failed to update comment {comment_id}: {e}")
             raise
 
-    def delete_comment(self, comment_id: str) -> bool:
+    def delete_comment(self, comment_id: str, comment_type: str = "footer-comments") -> bool:
         """
         Delete a comment.
 
         Args:
             comment_id: ID of the comment to delete
+            comment_type: (optional) 'footer-comments' or 'inline-comments'
 
         Returns:
             True if successful
@@ -1978,7 +2007,11 @@ class ConfluenceCloud(
         Raises:
             HTTPError: If the API call fails
         """
-        endpoint = self.get_endpoint("comment_by_id", id=comment_id)
+        if comment_type not in ("footer-comments", "inline-comments"):
+            raise ValueError("comment_type must be 'footer-comments' or 'inline-comments'")
+        endpoint = self.get_endpoint(
+            "footer_comment" if comment_type == "footer-comments" else "inline_comment", id=comment_id
+        )
 
         try:
             self.delete(endpoint)
